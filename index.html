@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCII Eye - Direct Seamless Heart Transition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background-color: #050608;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            font-family: monospace;
+        }
+        .window {
+            background: #181a1f;
+            border: 1px solid #2d3139;
+            border-radius: 10px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), 0 0 35px rgba(255, 182, 193, 0.25);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        .title-bar {
+            background: #21252b;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #2d3139;
+        }
+        .dots {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .red { background: #ff5f56; }
+        .yellow { background: #ffbd2e; }
+        .green { background: #27c93f; }
+        .title {
+            color: #abb2bf;
+            font-size: 13px;
+        }
+        .replay-btn {
+            background: #3a3f4b;
+            color: #fff;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            font-family: monospace;
+        }
+        .replay-btn:hover {
+            background: #4b5263;
+        }
+        canvas {
+            display: block;
+            background: #050608;
+        }
+    </style>
+</head>
+<body>
+
+<div class="window">
+    <div class="title-bar">
+        <div class="dots">
+            <div class="dot red"></div>
+            <div class="dot yellow"></div>
+            <div class="dot green"></div>
+            <span class="title">pastel_heart_universe_v3.py</span>
+        </div>
+        <button class="replay-btn" onclick="resetAnimation()">Replay Sequence</button>
+    </div>
+    <canvas id="asciiCanvas"></canvas>
+</div>
+
+<script>
+    const canvas = document.getElementById('asciiCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const cols = 110;
+    const rows = 55;
+    const charWidth = 7;
+    const charHeight = 12;
+
+    canvas.width = cols * charWidth;
+    canvas.height = rows * charHeight;
+
+    const ramp = ' .:-=+*#%@';
+    const bgCode = `import numpy as np; float eye_shader(vec2 uv) { vec3 col = vec3(0.0); return length(uv); }`.repeat(30);
+
+    // ข้อความเรียงเป็นรูปหัวใจ
+    const loveText = "I LOVE YOU ";
+
+    // สุ่มตำแหน่งประกายดาวในอวกาศ
+    const starChars = ['*', '+', '.', '✦', '°', 'o', '✧'];
+    const starGrid = [];
+    for (let r = 0; r < rows; r++) {
+        starGrid[r] = [];
+        for (let c = 0; c < cols; c++) {
+            if (Math.random() < 0.15) {
+                starGrid[r][c] = {
+                    char: starChars[Math.floor(Math.random() * starChars.length)],
+                    phase: Math.random() * Math.PI * 2,
+                    speed: 1.2 + Math.random() * 2.0
+                };
+            } else {
+                starGrid[r][c] = null;
+            }
+        }
+    }
+
+    let startTime = Date.now();
+
+    function resetAnimation() {
+        startTime = Date.now();
+    }
+
+    function animate() {
+        const elapsed = (Date.now() - startTime) / 1000;
+        
+        ctx.fillStyle = '#050608';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.font = '11px "Courier New", monospace';
+        ctx.textBaseline = 'top';
+
+        // --- TIMELINE STATES ---
+        let eyeOpen = 0.0;
+        let zoom = 1.0;
+        let inDarkUniverse = false;
+        let heartSize = 0.0;
+
+        if (elapsed < 3.0) {
+            // 1. ค่อยๆ ลืมตาขึ้นช้าๆ (0s - 3s)
+            const progress = elapsed / 3.0;
+            eyeOpen = Math.sin((progress * Math.PI) / 2);
+        } 
+        else if (elapsed < 6.5) {
+            // 2. กระพริบตา 3 ครั้งช่วงแรก (3s - 6.5s)
+            const blinkTime = elapsed - 3.0;
+            const blinkCycle = Math.sin(blinkTime * Math.PI * 1.2); 
+            if (blinkCycle > 0.6) {
+                const blinkProgress = (blinkCycle - 0.6) / 0.4;
+                eyeOpen = Math.max(0.02, 1.0 - Math.sin(blinkProgress * Math.PI));
+            } else {
+                eyeOpen = 1.0;
+            }
+        } 
+        else if (elapsed < 10.5) {
+            // 3. ซูมเข้าไปในตาดำช้าๆ จนทะลุมืดสนิท (6.5s - 10.5s)
+            eyeOpen = 1.0;
+            const zoomProgress = (elapsed - 6.5) / 4.0;
+            zoom = 1.0 + Math.pow(zoomProgress * 3.2, 3.2);
+        } 
+        else {
+            // 4. เข้าสู่อวกาศโดยตรง + หัวใจขยายใหญ่ขึ้น + ประกายดาวรอบๆ (10.5s เป็นต้นไป)
+            inDarkUniverse = true;
+            
+            const spaceTime = elapsed - 10.5;
+            const targetSize = 1.0;
+            const growth = Math.sin(Math.min(1.0, spaceTime / 5.0) * (Math.PI / 2));
+            heartSize = targetSize * growth;
+        }
+
+        const pupilTargetX = Math.sin(elapsed * 0.4) * 0.04 / zoom;
+        const pupilTargetY = Math.cos(elapsed * 0.4) * 0.02 / zoom;
+
+        let codeIndex = 0;
+
+        // --- PHASE 4: อวกาศหัวใจชมพูพาสเทล (หลังจากซูมทะลุมืดสนิท) ---
+        if (inDarkUniverse) {
+            const spaceTime = elapsed - 10.5;
+            const bgStarAlpha = Math.min(1.0, spaceTime / 2.0);
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const posX = c * charWidth + charWidth / 2;
+                    const posY = r * charHeight + charHeight / 2;
+
+                    if (heartSize > 0.005) {
+                        const scale = heartSize * 156; 
+                        const hx = (posX - canvas.width / 2) / scale;
+                        const hy = -(posY - canvas.height / 2 + 20) / scale;
+                        
+                        const heartEq = Math.pow(hx * hx + hy * hy - 1, 3) - hx * hx * Math.pow(hy, 3);
+
+                        if (heartEq <= 0) {
+                            const textIdx = (c + r * 2) % loveText.length;
+                            const char = loveText[textIdx];
+
+                            const glow = Math.abs(heartEq);
+                            // โทนสีชมพูพาสเทล
+                            const red = 255;
+                            const green = Math.floor(175 + Math.sin(elapsed * 2.5 + glow * 3) * 20);
+                            const blue = Math.floor(198 + Math.cos(elapsed * 2.0) * 18);
+
+                            ctx.fillStyle = `rgb(${red}, ${green}, ${blue})`;
+                            ctx.fillText(char, c * charWidth, r * charHeight);
+                            continue;
+                        }
+                    }
+
+                    // ประกายดาวระยิบระยับรอบๆ หัวใจ
+                    const star = starGrid[r][c];
+                    if (star) {
+                        const twinkle = (Math.sin(elapsed * star.speed + star.phase) + 1) / 2;
+                        ctx.fillStyle = `rgba(255, 235, 240, ${twinkle * bgStarAlpha * 0.85})`;
+                        ctx.fillText(star.char, c * charWidth, r * charHeight);
+                    }
+                }
+            }
+
+            requestAnimationFrame(animate);
+            return;
+        }
+
+        // --- PHASE 1 - 3: เรนเดอร์ภาพดวงตาและการซูม ---
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const x = ((c - cols / 2) / (cols / 2.2)) / zoom;
+                const y = ((r - rows / 2) / (rows / 2.2) * (rows / cols) * 2.1) / zoom;
+
+                const posX = c * charWidth;
+                const posY = r * charHeight;
+
+                // รูปทรงเปลือกตา
+                const eyeShape = (x * x) * 0.65 + (y * y) / (0.36 * eyeOpen * eyeOpen);
+
+                if (eyeShape > 1.0) {
+                    const char = bgCode[(codeIndex++) % bgCode.length];
+                    ctx.fillStyle = 'rgba(70, 85, 100, 0.25)';
+                    ctx.fillText(char, posX, posY);
+                    continue;
+                }
+
+                // 3D Math & Distances
+                const r2 = x * x + y * y;
+                const z = Math.sqrt(Math.max(0, 1.0 - r2));
+
+                const dx = x - pupilTargetX;
+                const dy = y - pupilTargetY;
+                const distFromPupil = Math.sqrt(dx * dx + dy * dy);
+
+                let brightness = 0;
+                let red = 0, green = 0, blue = 0;
+
+                const specX = x - (pupilTargetX + 0.1 / zoom);
+                const specY = y - (pupilTargetY + 0.1 / zoom);
+                const isSpecular = (specX * specX + specY * specY) < (0.012 / (zoom * 0.5));
+
+                if (isSpecular && distFromPupil >= 0.12) {
+                    brightness = 1.0;
+                    red = 255; green = 255; blue = 230;
+                } else if (distFromPupil < 0.15) {
+                    // ประกายดาวปรากฏเฉพาะในตาดำขณะซูม
+                    const star = starGrid[r][c];
+                    if (elapsed > 6.5 && star) {
+                        const zoomInnerProgress = Math.min(1.0, (elapsed - 6.5) / 3.5);
+                        const twinkle = (Math.sin(elapsed * star.speed + star.phase) + 1) / 2;
+                        ctx.fillStyle = `rgba(255, 230, 240, ${twinkle * zoomInnerProgress})`;
+                        ctx.fillText(star.char, posX, posY);
+                        continue;
+                    }
+                    brightness = 0.05;
+                    red = 15; green = 8; blue = 12;
+                } else if (distFromPupil < 0.48) {
+                    // ม่านตา (Iris)
+                    const angle = Math.atan2(dy, dx);
+                    const pattern = Math.sin(angle * 18 + distFromPupil * 12) * 0.25 + 0.5;
+                    const irisRatio = (distFromPupil - 0.15) / 0.33;
+
+                    brightness = 0.35 + pattern * 0.55;
+
+                    red = Math.floor(255 - irisRatio * 60);
+                    green = Math.floor(130 * pattern + (1 - irisRatio) * 80);
+                    blue = Math.floor(20 + irisRatio * 35);
+                } else {
+                    // ตาขาว (Sclera)
+                    const lightX = 0.5, lightY = 0.7, lightZ = 1.0;
+                    const len = Math.sqrt(lightX*lightX + lightY*lightY + lightZ*lightZ);
+                    const diffuse = Math.max(0, (x * lightX/len + y * lightY/len + z * lightZ/len));
+                    
+                    brightness = 0.25 + diffuse * 0.65;
+
+                    red = Math.floor(190 + diffuse * 60);
+                    green = Math.floor(120 + diffuse * 70);
+                    blue = Math.floor(100 + diffuse * 60);
+                }
+
+                const shadow = Math.max(0, 1 - Math.pow(Math.abs(y * zoom), 2.5));
+                red = Math.floor(red * shadow);
+                green = Math.floor(green * shadow);
+                blue = Math.floor(blue * shadow);
+
+                const charIdx = Math.floor(brightness * (ramp.length - 1));
+                const char = ramp[Math.max(0, Math.min(ramp.length - 1, charIdx))];
+
+                ctx.fillStyle = `rgb(${red}, ${green}, ${blue})`;
+                ctx.fillText(char, posX, posY);
+            }
+        }
+
+        requestAnimationFrame(animate);
+    }
+
+    animate();
+</script>
+
+</body>
+</html>
